@@ -59,7 +59,7 @@ All IDs are created on the phone so records can be made offline. Synced tables a
 
 Everything is built and proven locally first, then deployed step by step. V1 is a website used in the phone's browser, and adding it to the home screen is optional.
 
-**Build order:** 1 and 2 (done), then 4, 5 and 7, which work on the phone with no accounts. Then 3 and 6, which need Supabase. Deployment and 8 come last.
+**Build order:** 1, 2 and 4 (done), then 5 and 7, which work on the phone with no accounts. Then 3 and 6, which need Supabase. Deployment and 8 come last.
 
 Each milestone ends with something that can be tried on a phone, using `npm run phone` on the same Wi-Fi until the app is deployed.
 

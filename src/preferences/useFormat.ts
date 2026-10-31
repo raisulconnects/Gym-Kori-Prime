@@ -18,11 +18,13 @@ export function useFormat() {
     });
     const longDay = new Intl.DateTimeFormat(locale, { weekday: 'long' });
     const shortDay = new Intl.DateTimeFormat('en-US', { weekday: 'narrow' });
+    const mediumDay = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
     return {
       number: (value: number | string) => (bangla ? toBanglaDigits(value) : String(value)),
       date: (date: Date) => longDate.format(date),
       dayName: (date: Date) => longDay.format(date),
       dayShort: (date: Date) => (bangla ? (BANGLA_SHORT_DAYS[date.getDay()] ?? '') : shortDay.format(date)),
+      dayMedium: (date: Date) => (bangla ? (BANGLA_SHORT_DAYS[date.getDay()] ?? '') : mediumDay.format(date)),
     };
   }, [language]);
 }

@@ -9,6 +9,13 @@ export function daysOfWeek(date: Date): Date[] {
   return Array.from({ length: 7 }, (_, index) => new Date(saturday + index * DAY_IN_MS));
 }
 
+/** The date on the user's own calendar, as YYYY-MM-DD. These sort correctly as text. */
+export function toLocalDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 export function isSameDay(first: Date, second: Date): boolean {
   return (
     first.getFullYear() === second.getFullYear() &&

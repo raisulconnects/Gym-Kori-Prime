@@ -5,6 +5,8 @@ import { ThemeBand } from './components/ThemeDecorations';
 import { usePreferences } from './preferences/PreferencesContext';
 import { EmptyListScreen } from './screens/EmptyListScreen';
 import { LanguageScreen } from './screens/LanguageScreen';
+import { RoutineEditorScreen } from './screens/RoutineEditorScreen';
+import { RoutinesScreen } from './screens/RoutinesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TodayScreen } from './screens/TodayScreen';
 
@@ -20,17 +22,6 @@ function WithBottomNav() {
       <Outlet />
       <BottomNav />
     </>
-  );
-}
-
-function RoutinesScreen() {
-  const { t } = useTranslation();
-  return (
-    <EmptyListScreen
-      title={t('routines.title')}
-      emptyTitle={t('routines.emptyTitle')}
-      emptyBody={t('routines.emptyBody')}
-    />
   );
 }
 
@@ -54,6 +45,8 @@ export function App() {
               <Route path="/routines" element={<RoutinesScreen />} />
               <Route path="/history" element={<HistoryScreen />} />
             </Route>
+            <Route path="/routines/new" element={<RoutineEditorScreen />} />
+            <Route path="/routines/:routineId" element={<RoutineEditorScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />
           </Route>
           <Route path="*" element={<Navigate to="/today" replace />} />

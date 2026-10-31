@@ -25,6 +25,9 @@ document.documentElement.dataset.theme = preferences.theme;
 document.documentElement.lang = preferences.language ?? 'en';
 document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_BAR_COLORS[preferences.theme]);
 
+// Ask the browser not to clear saved workouts when the phone runs low on space. It may say no.
+void navigator.storage?.persist?.();
+
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing root element');
 

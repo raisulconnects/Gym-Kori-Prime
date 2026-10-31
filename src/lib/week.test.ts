@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { daysOfWeek, isSameDay } from './week';
+import { daysOfWeek, isSameDay, toLocalDate } from './week';
+
+describe('toLocalDate', () => {
+  it('pads months and days', () => {
+    expect(toLocalDate(new Date(2026, 0, 5))).toBe('2026-01-05');
+    expect(toLocalDate(new Date(2026, 11, 31, 23, 59))).toBe('2026-12-31');
+  });
+});
 
 describe('daysOfWeek', () => {
   it('starts on Saturday and ends on Friday', () => {
