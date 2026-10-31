@@ -199,8 +199,12 @@ export async function finishWorkout(workout: Workout, durationSeconds: number, n
 
 /** Removes a workout started by mistake. It won't count towards attendance or last-time numbers. */
 export async function discardWorkout(workoutId: string): Promise<void> {
-  const timestamp = new Date().toISOString();
-  await db.workouts.update(workoutId, { deletedAt: timestamp, updatedAt: timestamp });
+  const changes = { deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  await db.transaction('rw', WORKOUT_TABLES, async () => {
+    await db.workouts.update(workoutId, changes);
+    await db.workoutExercises.where('workoutId').equals(workoutId).modify(changes);
+    await db.workoutSets.where('workoutId').equals(workoutId).modify(changes);
+  });
 }
 
 /** True when a running workout has had nothing logged for so long that it was probably forgotten. */

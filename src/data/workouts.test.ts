@@ -180,6 +180,19 @@ describe('finishing', () => {
   });
 });
 
+describe('discardWorkout', () => {
+  it('marks the workout and everything in it as deleted', async () => {
+    const id = await startWorkout(pushDay, DAY_ONE);
+    await discardWorkout(id);
+    expect((await workout(id)).deletedAt).toBeDefined();
+    const entries = await db.workoutExercises.where('workoutId').equals(id).toArray();
+    const sets = await db.workoutSets.where('workoutId').equals(id).toArray();
+    expect(entries.length).toBeGreaterThan(0);
+    expect(sets.length).toBeGreaterThan(0);
+    expect([...entries, ...sets].every((row) => row.deletedAt)).toBe(true);
+  });
+});
+
 describe('forgotten workouts', () => {
   const base = {
     id: 'w',

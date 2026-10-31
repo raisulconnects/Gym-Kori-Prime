@@ -13,6 +13,7 @@
   --color-done: var(--c-done);
   --color-on-done: var(--c-on-done);
   --color-danger: var(--c-danger);
+  --color-danger-on-card: var(--c-danger-on-card);
   --color-control: var(--c-control);
   --color-today: var(--c-today);
   --color-on-today: var(--c-on-today);
@@ -36,6 +37,7 @@
   --c-done: #22c55e;
   --c-on-done: #0f172a;
   --c-danger: #f87171;
+  --c-danger-on-card: #f87171;
   --c-control: #6b7280;
   --c-today: #f97316;
   --c-on-today: #0f172a;
@@ -72,6 +74,7 @@
   --c-done: #1f6b45;
   --c-on-done: #fff9ec;
   --c-danger: #a61c28;
+  --c-danger-on-card: #a61c28;
   --c-control: #7a6a58;
   --c-today: #a61c28;
   --c-on-today: #fff9ec;
@@ -108,6 +111,7 @@
   --c-done: #3ddc97;
   --c-on-done: #12235a;
   --c-danger: #ff7aa8;
+  --c-danger-on-card: #fff6d6;
   --c-control: #fff6d6;
   --c-today: #ffc914;
   --c-on-today: #12235a;

@@ -1,16 +1,16 @@
-import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { BottomNav } from './components/BottomNav';
 import { ResumeWorkout } from './components/ResumeWorkout';
 import { ThemeBand } from './components/ThemeDecorations';
 import { usePreferences } from './preferences/PreferencesContext';
-import { EmptyListScreen } from './screens/EmptyListScreen';
 import { FinishWorkoutScreen } from './screens/FinishWorkoutScreen';
+import { HistoryScreen } from './screens/HistoryScreen';
 import { LanguageScreen } from './screens/LanguageScreen';
 import { RoutineEditorScreen } from './screens/RoutineEditorScreen';
 import { RoutinesScreen } from './screens/RoutinesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TodayScreen } from './screens/TodayScreen';
+import { WorkoutDetailScreen } from './screens/WorkoutDetailScreen';
 import { WorkoutScreen } from './screens/WorkoutScreen';
 
 /** Sends people who haven't chosen a language to the first-launch screen. */
@@ -28,13 +28,6 @@ function WithBottomNav() {
   );
 }
 
-function HistoryScreen() {
-  const { t } = useTranslation();
-  return (
-    <EmptyListScreen title={t('history.title')} emptyTitle={t('history.emptyTitle')} emptyBody={t('history.emptyBody')} />
-  );
-}
-
 export function App() {
   return (
     <BrowserRouter>
@@ -49,6 +42,7 @@ export function App() {
               <Route path="/routines" element={<RoutinesScreen />} />
               <Route path="/history" element={<HistoryScreen />} />
             </Route>
+            <Route path="/history/:workoutId" element={<WorkoutDetailScreen />} />
             <Route path="/workout" element={<WorkoutScreen />} />
             <Route path="/workout/finish" element={<FinishWorkoutScreen />} />
             <Route path="/routines/new" element={<RoutineEditorScreen />} />

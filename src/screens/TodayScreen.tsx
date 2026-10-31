@@ -11,6 +11,7 @@ import {
   useNow,
   useRoutines,
   useSchedule,
+  useWeekHistory,
 } from '../data/hooks';
 import { startWorkout } from '../data/workouts';
 import { toLocalDate } from '../lib/week';
@@ -46,6 +47,7 @@ export function TodayScreen() {
   const exercises = useExercises();
   const active = useActiveWorkout();
   const finished = useFinishedWorkoutOn(today);
+  const history = useWeekHistory(now, today);
   const loaded = routines && plan && exercises && active !== undefined && finished !== undefined;
 
   const todaysRoutine = loaded ? routines.find((routine) => routine.id === plan[now.getDay()]) : undefined;
@@ -143,7 +145,12 @@ export function TodayScreen() {
           <UserRound aria-hidden="true" size={26} />
         </Link>
       </div>
-      <WeekStrip date={now} plan={hasPlan ? plan : undefined} />
+      {history && (
+        <WeekStrip
+          days={hasPlan ? history.days : history.days.map((day) => ({ ...day, status: 'none' as const }))}
+          label={t('today.thisWeek')}
+        />
+      )}
       {loaded && (
         <section className="card relative flex flex-col gap-3.5 overflow-hidden p-5">
           <ThemeMotif />

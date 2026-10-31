@@ -45,6 +45,24 @@ V1 is ready when one person can do all of this on a real phone, in any theme and
 
 All IDs are created on the phone so records can be made offline. Synced tables also record when a row was last updated and when it was deleted.
 
+### Ready for future features
+
+- **Adding is safe:** new features can add tables and optional columns without touching existing data. Dexie and Postgres both handle this through versioned migrations.
+- **History can't be rewritten:** workouts keep their own copy of the routine name and their own sets, so editing or deleting a routine leaves them alone.
+- **Analytics needs no reshaping:** weights are plain kg, dates are the user's local date, and each set is its own row.
+- **Sync is prepared:** IDs are created on the phone, and rows carry update and delete times.
+
+### To add when the feature needs it
+
+- **Time and distance sets:** a set only holds weight and reps today, so Plank and Treadmill are logged as reps. Optional duration and distance columns, plus a type on each exercise, can be added later.
+- **Muscle groups:** the built-in exercise list only has names. Charts by muscle group will need this added.
+- **Body measurements:** these get their own table in V2.
+
+### To add in the accounts milestone
+
+- **Profile:** display name, language, theme and weight unit, stored per user.
+- **Row ownership:** every Supabase row gets a user ID and row-level security. The phone holds one signed-in user's data at a time.
+
 ## Behavior rules
 
 - **Changing the schedule never rewrites history.** Schedule changes apply from a given date, so old attendance stays accurate.
@@ -59,7 +77,9 @@ All IDs are created on the phone so records can be made offline. Synced tables a
 
 Everything is built and proven locally first, then deployed step by step. V1 is a website used in the phone's browser, and adding it to the home screen is optional.
 
-**Build order:** 1, 2, 4 and 5 (done), then 7, which works on the phone with no accounts. Then 3 and 6, which need Supabase. Deployment and 8 come last.
+**Build order:** 1, 2, 4, 5 and 7 (done). Then 3 and 6, which need Supabase. Deployment and 8 come last, once everything is proven to work locally.
+
+**Sign-in:** V1 starts with email and password. Google sign-in moves to a later release.
 
 Each milestone ends with something that can be tried on a phone, using `npm run phone` on the same Wi-Fi until the app is deployed.
 
@@ -76,7 +96,7 @@ Each milestone ends with something that can be tried on a phone, using `npm run 
 
 ### 3. Accounts
 - Supabase project, tables and row-level security
-- First-launch language choice, sign-up, login, Google sign-in, password reset, log out
+- First-launch language choice, sign-up, login with email and password, password reset, log out
 - Delete account
 - Saved language, theme and unit
 - **Done when:** two test accounts can't see each other's data, and preferences follow a user to another device.
@@ -125,7 +145,7 @@ Each milestone ends with something that can be tried on a phone, using `npm run 
 
 | When | What |
 |---|---|
-| Milestone 3 | Supabase account and a Google Cloud project for Google sign-in |
+| Milestone 3 | A free Supabase project, for its URL and public key |
 | Deployment | GitHub and Vercel accounts |
 | Milestone 8 | Domain, sender email address, privacy policy details, an iPhone and Android phone for testing |
 
