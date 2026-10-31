@@ -17,6 +17,8 @@
   --color-today: var(--c-today);
   --color-on-today: var(--c-on-today);
   --color-nav: var(--c-nav);
+  --color-rest: var(--c-rest);
+  --color-on-rest: var(--c-on-rest);
   --font-body: var(--font-body-stack);
   --font-display: var(--font-display-stack);
 }
@@ -38,6 +40,8 @@
   --c-today: #f97316;
   --c-on-today: #0f172a;
   --motif-space: 0;
+  --c-rest: #f97316;
+  --c-on-rest: #0f172a;
   --c-nav: #1f2937;
   --c-field: #111827;
   --c-field-text: #f8fafc;
@@ -72,6 +76,8 @@
   --c-today: #a61c28;
   --c-on-today: #fff9ec;
   --motif-space: 108px;
+  --c-rest: #1f2a6b;
+  --c-on-rest: #fff9ec;
   --c-nav: #fff9ec;
   --c-field: #fff9ec;
   --c-field-text: #231a12;
@@ -106,6 +112,8 @@
   --c-today: #ffc914;
   --c-on-today: #12235a;
   --motif-space: 108px;
+  --c-rest: #ffc914;
+  --c-on-rest: #12235a;
   --c-nav: #a80f3c;
   --c-field: #fff6d6;
   --c-field-text: #12235a;
@@ -265,6 +273,18 @@
     padding: 0;
     font-weight: 700;
     text-align: center;
+  }
+
+  .field-set {
+    height: 48px;
+    padding: 0;
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  :lang(en) .set-heading {
+    text-transform: uppercase;
   }
 
   .outline-action {

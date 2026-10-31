@@ -33,11 +33,49 @@ export interface WeeklySchedule extends Synced {
   days: WeekPlan;
 }
 
+export interface Workout extends Synced {
+  /** The date on the user's calendar when it started. The workout belongs to this day. */
+  localDate: string;
+  routineId: string | null;
+  /** Kept separately so history still reads correctly if the routine is renamed or deleted. */
+  routineName: string;
+  status: 'active' | 'finished';
+  startedAt: string;
+  /** The last time anything was logged, used to spot a forgotten Finish. */
+  lastActivityAt: string;
+  endedAt?: string;
+  durationSeconds?: number;
+  note: string;
+}
+
+export interface WorkoutExercise extends Synced {
+  workoutId: string;
+  exerciseId: string;
+  position: number;
+  skipped: boolean;
+  /** True when it was added during the workout rather than coming from the routine. */
+  extra: boolean;
+  note: string;
+}
+
+export interface WorkoutSet extends Synced {
+  workoutId: string;
+  workoutExerciseId: string;
+  position: number;
+  /** Always kg. Null means no weight was entered, as with bodyweight exercises. */
+  weightKg: number | null;
+  reps: number | null;
+  done: boolean;
+}
+
 class GymKoriDatabase extends Dexie {
   routines!: EntityTable<Routine, 'id'>;
   routineExercises!: EntityTable<RoutineExercise, 'id'>;
   customExercises!: EntityTable<CustomExercise, 'id'>;
   weeklySchedules!: EntityTable<WeeklySchedule, 'id'>;
+  workouts!: EntityTable<Workout, 'id'>;
+  workoutExercises!: EntityTable<WorkoutExercise, 'id'>;
+  workoutSets!: EntityTable<WorkoutSet, 'id'>;
 
   constructor() {
     super('gym-kori');
@@ -46,6 +84,11 @@ class GymKoriDatabase extends Dexie {
       routineExercises: 'id, routineId',
       customExercises: 'id',
       weeklySchedules: 'id, effectiveFrom',
+    });
+    this.version(2).stores({
+      workouts: 'id, localDate, status',
+      workoutExercises: 'id, workoutId, exerciseId',
+      workoutSets: 'id, workoutId, workoutExerciseId',
     });
   }
 }
