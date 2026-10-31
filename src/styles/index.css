@@ -1,0 +1,234 @@
+@import "tailwindcss";
+
+/* Screens only use these semantic colors. Each theme below fills them in. */
+@theme inline {
+  --color-page: var(--c-bg);
+  --color-card: var(--c-card);
+  --color-ink: var(--c-text);
+  --color-muted: var(--c-muted);
+  --color-heading: var(--c-heading);
+  --color-accent: var(--c-accent);
+  --color-cta: var(--c-cta);
+  --color-on-cta: var(--c-on-cta);
+  --color-done: var(--c-done);
+  --color-on-done: var(--c-on-done);
+  --color-danger: var(--c-danger);
+  --color-control: var(--c-control);
+  --color-today: var(--c-today);
+  --color-on-today: var(--c-on-today);
+  --color-nav: var(--c-nav);
+  --font-body: var(--font-body-stack);
+  --font-display: var(--font-display-stack);
+}
+
+:root,
+[data-theme="modern"] {
+  --c-bg: #111827;
+  --c-card: #1f2937;
+  --c-text: #f8fafc;
+  --c-muted: #cbd5e1;
+  --c-heading: #f8fafc;
+  --c-accent: #f97316;
+  --c-cta: #f97316;
+  --c-on-cta: #0f172a;
+  --c-done: #22c55e;
+  --c-on-done: #0f172a;
+  --c-danger: #f87171;
+  --c-control: #6b7280;
+  --c-today: #f97316;
+  --c-on-today: #0f172a;
+  --c-nav: #1f2937;
+  --today-border: 0;
+  --line: 1px solid #374151;
+  --card-border: 0;
+  --nav-line: 1px solid #374151;
+  --cta-border: 0;
+  --cta-shadow: none;
+  --radius: 12px;
+  --radius-hero: 16px;
+  --font-display-stack: "Barlow Condensed", "Hind Siliguri", sans-serif;
+  --font-body-stack: "Barlow", "Hind Siliguri", sans-serif;
+  --display-weight: 700;
+  --display-line-height: 1;
+}
+
+[data-theme="kantha"] {
+  --c-bg: #f7efdc;
+  --c-card: #fff9ec;
+  --c-text: #231a12;
+  --c-muted: #5a4a3a;
+  --c-heading: #1f2a6b;
+  --c-accent: #a61c28;
+  --c-cta: #a61c28;
+  --c-on-cta: #fff9ec;
+  --c-done: #1f6b45;
+  --c-on-done: #fff9ec;
+  --c-danger: #a61c28;
+  --c-control: #7a6a58;
+  --c-today: #a61c28;
+  --c-on-today: #fff9ec;
+  --c-nav: #fff9ec;
+  --today-border: 0;
+  --line: 2px dashed #c9b89c;
+  --card-border: 2px dashed #1f2a6b;
+  --nav-line: 2px dashed #1f2a6b;
+  --cta-border: 0;
+  --cta-shadow: none;
+  --radius: 12px;
+  --radius-hero: 14px;
+  --font-display-stack: "Noto Serif Bengali", serif;
+  --font-body-stack: "Hind Siliguri", sans-serif;
+  --display-weight: 700;
+  --display-line-height: 1.3;
+}
+
+[data-theme="rickshaw"] {
+  --c-bg: #12235a;
+  --c-card: #a80f3c;
+  --c-text: #fff6d6;
+  --c-muted: #fff6d6;
+  --c-heading: #fff6d6;
+  --c-accent: #ffc914;
+  --c-cta: #ffc914;
+  --c-on-cta: #12235a;
+  --c-done: #3ddc97;
+  --c-on-done: #12235a;
+  --c-danger: #ff7aa8;
+  --c-control: #fff6d6;
+  --c-today: #ffc914;
+  --c-on-today: #12235a;
+  --c-nav: #a80f3c;
+  --today-border: 3px solid #fff6d6;
+  --line: 2px dotted #ffc914;
+  --card-border: 3px solid #ffc914;
+  --nav-line: 4px solid #ffc914;
+  --cta-border: 3px solid #12235a;
+  --cta-shadow: 4px 4px 0 #12235a;
+  --radius: 14px;
+  --radius-hero: 16px;
+  --font-display-stack: "Galada", cursive;
+  --font-body-stack: "Hind Siliguri", sans-serif;
+  --display-weight: 400;
+  --display-line-height: 1.25;
+}
+
+/* Bangla letters need more room above and below than tight Latin headings. */
+[lang="bn"] {
+  --display-line-height: 1.3;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    background: var(--c-bg);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: var(--font-body-stack);
+    overscroll-behavior-y: none;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--c-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .display {
+    margin: 0;
+    color: var(--c-heading);
+    font-family: var(--font-display-stack);
+    font-weight: var(--display-weight);
+    line-height: var(--display-line-height);
+  }
+
+  .section-label {
+    margin: 0;
+    color: var(--c-accent);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  :lang(en) .section-label {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .card {
+    background: var(--c-card);
+    border: var(--card-border);
+    border-radius: var(--radius-hero);
+  }
+
+  .cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    padding: 0 16px;
+    border: var(--cta-border);
+    border-radius: var(--radius);
+    background: var(--c-cta);
+    box-shadow: var(--cta-shadow);
+    color: var(--c-on-cta);
+    font-family: var(--font-display-stack);
+    font-size: 26px;
+    font-weight: var(--display-weight);
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    transition: opacity 120ms ease;
+  }
+
+  .cta:active {
+    opacity: 0.85;
+  }
+
+  .choice {
+    min-height: 48px;
+    padding: 4px 12px;
+    border: 2px solid var(--c-control);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--c-text);
+    font-size: 16px;
+    font-weight: 700;
+    transition: opacity 120ms ease;
+  }
+
+  .choice:active {
+    opacity: 0.8;
+  }
+
+  .choice[aria-pressed="true"] {
+    border-color: var(--c-cta);
+    background: var(--c-cta);
+    color: var(--c-on-cta);
+  }
+
+  .divider {
+    border-bottom: var(--line);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cta,
+    .choice {
+      transition: none;
+    }
+  }
+}
