@@ -1,7 +1,9 @@
 import { Check, ChevronLeft } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { useActiveWorkout } from '../data/hooks';
 import { LANGUAGES, type Language, THEMES, type Theme, UNITS } from '../preferences/preferences';
 import { usePreferences } from '../preferences/PreferencesContext';
 
@@ -23,9 +25,85 @@ function OptionGroup({ title, className, children }: { title: string; className:
   );
 }
 
+function ProfileCard() {
+  const { t } = useTranslation();
+  const { email, displayName, updateDisplayName } = useAuth();
+  const [name, setName] = useState(displayName);
+  const [message, setMessage] = useState<{ text: string; failed: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // The saved name can arrive after the screen opens.
+  useEffect(() => setName(displayName), [displayName]);
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    if (!name.trim()) return setMessage({ text: t('auth.errorName'), failed: true });
+    setBusy(true);
+    const { error } = await updateDisplayName(name);
+    setBusy(false);
+    setMessage(error ? { text: t(error), failed: true } : { text: t('settings.nameSaved'), failed: false });
+  }
+
+  return (
+    <section className="card flex flex-col gap-2.5 p-4">
+      <h2 className="section-label">{t('settings.profile')}</h2>
+      <form noValidate onSubmit={save} className="flex flex-col gap-2.5">
+        <label className="flex flex-col gap-1.5 text-[15px] font-semibold">
+          {t('auth.name')}
+          <span className="flex gap-2">
+            <input
+              name="name"
+              autoComplete="name"
+              maxLength={60}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                setMessage(null);
+              }}
+              className="field min-w-0 flex-1"
+            />
+            <button type="submit" disabled={busy || name === displayName} className="small-action disabled:opacity-50">
+              {t('common.save')}
+            </button>
+          </span>
+        </label>
+        {message && (
+          <p role={message.failed ? 'alert' : 'status'} className="m-0 text-[15px] font-semibold">
+            {message.text}
+          </p>
+        )}
+      </form>
+      <div className="flex flex-col text-[15px]">
+        <span className="font-semibold">{t('auth.email')}</span>
+        <span lang="en" className="break-words text-muted">
+          {email}
+        </span>
+      </div>
+    </section>
+  );
+}
+
 export function SettingsScreen() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { language, theme, unit, update } = usePreferences();
+  const { signOut, deleteAccount } = useAuth();
+  const active = useActiveWorkout();
+  const [error, setError] = useState<string | null>(null);
+
+  async function logOut() {
+    if (active && !window.confirm(t('settings.confirmLogOutWorkout'))) return;
+    await signOut();
+    navigate('/login', { replace: true });
+  }
+
+  async function removeAccount() {
+    if (!window.confirm(t('settings.confirmDelete'))) return;
+    setError(null);
+    const result = await deleteAccount();
+    if (result.error) setError(result.error);
+    else navigate('/login', { replace: true });
+  }
 
   return (
     <>
@@ -37,6 +115,8 @@ export function SettingsScreen() {
       </header>
       <main className="flex flex-1 flex-col gap-3.5 px-4 pb-4">
         <h1 className="display text-[38px]">{t('settings.title')}</h1>
+
+        <ProfileCard />
 
         <OptionGroup title={t('settings.language')} className="grid grid-cols-2 gap-2">
           {LANGUAGES.map((option) => (
@@ -90,6 +170,22 @@ export function SettingsScreen() {
             </button>
           ))}
         </OptionGroup>
+
+        <button type="button" onClick={logOut} className="choice mt-2 min-h-12">
+          {t('settings.logOut')}
+        </button>
+        {error && (
+          <p role="alert" className="m-0 text-base font-semibold text-danger">
+            {t(error)}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={removeAccount}
+          className="mt-4 min-h-12 border-0 bg-transparent text-base font-bold text-danger"
+        >
+          {t('settings.deleteAccount')}
+        </button>
       </main>
     </>
   );

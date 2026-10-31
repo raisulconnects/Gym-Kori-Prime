@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './support';
 
 const WEDNESDAY = new Date('2026-10-28T10:00:00+06:00');
 const DAY_MS = 24 * 60 * 60 * 1000;

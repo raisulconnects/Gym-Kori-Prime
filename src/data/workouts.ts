@@ -8,7 +8,8 @@ export const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
 const EXTRA_EXERCISE_SETS = 3;
 const EXTRA_EXERCISE_REPS = 10;
 
-const WORKOUT_TABLES = [db.workouts, db.workoutExercises, db.workoutSets];
+/** A function because `db` changes when a different account logs in. */
+const workoutTables = () => [db.workouts, db.workoutExercises, db.workoutSets];
 
 export interface PastSet {
   weightKg: number | null;
@@ -51,7 +52,7 @@ export async function loadLastPerformance(exerciseId: string, excludeWorkoutId?:
  * so one tap confirms a set. If a workout is already running, that one is returned instead.
  */
 export async function startWorkout(routine: RoutineToStart, now: Date): Promise<string> {
-  return db.transaction('rw', WORKOUT_TABLES, async () => {
+  return db.transaction('rw', workoutTables(), async () => {
     const running = await db.workouts
       .where('status')
       .equals('active')
@@ -130,7 +131,7 @@ export async function updateSet(
   changes: Partial<Pick<WorkoutSet, 'weightKg' | 'reps' | 'done'>>,
 ): Promise<void> {
   const timestamp = new Date().toISOString();
-  await db.transaction('rw', WORKOUT_TABLES, async () => {
+  await db.transaction('rw', workoutTables(), async () => {
     await db.workoutSets.update(set.id, { ...changes, updatedAt: timestamp });
     await touchWorkout(set.workoutId, timestamp);
   });
@@ -139,7 +140,7 @@ export async function updateSet(
 /** Adds another set, starting from the numbers in the previous one. */
 export async function addSet(exercise: WorkoutExercise, previous: WorkoutSet | undefined): Promise<void> {
   const timestamp = new Date().toISOString();
-  await db.transaction('rw', WORKOUT_TABLES, async () => {
+  await db.transaction('rw', workoutTables(), async () => {
     await db.workoutSets.add({
       id: createId(),
       workoutId: exercise.workoutId,
@@ -159,7 +160,7 @@ export async function updateExercise(
   changes: Partial<Pick<WorkoutExercise, 'skipped' | 'note'>>,
 ): Promise<void> {
   const timestamp = new Date().toISOString();
-  await db.transaction('rw', WORKOUT_TABLES, async () => {
+  await db.transaction('rw', workoutTables(), async () => {
     await db.workoutExercises.update(exercise.id, { ...changes, updatedAt: timestamp });
     await touchWorkout(exercise.workoutId, timestamp);
   });
@@ -168,7 +169,7 @@ export async function updateExercise(
 /** Adds an exercise that wasn't in the routine. */
 export async function addExtraExercise(workoutId: string, exerciseId: string): Promise<string> {
   const timestamp = new Date().toISOString();
-  return db.transaction('rw', WORKOUT_TABLES, async () => {
+  return db.transaction('rw', workoutTables(), async () => {
     const position = await db.workoutExercises.where('workoutId').equals(workoutId).count();
     const last = await loadLastPerformance(exerciseId, workoutId);
     const id = await addExerciseRows(
@@ -200,7 +201,7 @@ export async function finishWorkout(workout: Workout, durationSeconds: number, n
 /** Removes a workout started by mistake. It won't count towards attendance or last-time numbers. */
 export async function discardWorkout(workoutId: string): Promise<void> {
   const changes = { deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-  await db.transaction('rw', WORKOUT_TABLES, async () => {
+  await db.transaction('rw', workoutTables(), async () => {
     await db.workouts.update(workoutId, changes);
     await db.workoutExercises.where('workoutId').equals(workoutId).modify(changes);
     await db.workoutSets.where('workoutId').equals(workoutId).modify(changes);

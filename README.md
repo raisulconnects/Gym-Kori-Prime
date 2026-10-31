@@ -29,7 +29,7 @@ Logging a workout has to be faster than resting between sets. Gym Kori opens on 
 
 ## Status
 
-Gym Kori is in active development and hasn't launched yet. V1 currently runs locally, with data stored in the browser. Accounts, sync and hosting are next. See the [roadmap](#roadmap).
+Gym Kori is in active development and hasn't launched yet. V1 currently runs locally. Accounts and profiles use Supabase, while workouts stay on the device until sync is built. See the [roadmap](#roadmap).
 
 ## Features
 
@@ -45,7 +45,8 @@ Gym Kori is in active development and hasn't launched yet. V1 currently runs loc
 | **Weekly schedule** | Give each weekday a routine or make it a rest day |
 | **History** | Review weekly attendance, missed days, and the full details of past workouts |
 | **Recovery** | Reopen the app to return to a running workout, and get asked to check the duration if you forgot to finish |
-| **Personalization** | Choose English or Bangla, one of three themes, and kg or lb |
+| **Accounts** | Sign up, log in, reset your password, edit your name, log out, or delete your account |
+| **Personalization** | Choose English or Bangla, one of three themes, and kg or lb, saved to your profile so they follow you |
 
 ### Three themes
 
@@ -75,8 +76,8 @@ Gym Kori is in active development and hasn't launched yet. V1 currently runs loc
 | **Planning** | Exercises, routines, weekly schedule | Done |
 | **Workout session** | Logging, rest timer, finish screen | Done |
 | **History** | Attendance and workout details | Done |
-| **Accounts** | Email and password login, profile, delete account | Next |
-| **Sync and offline** | Sync across devices, opening with no signal | Planned |
+| **Accounts** | Email and password login, profile, delete account | Done |
+| **Sync and offline** | Sync across devices, opening with no signal | Next |
 | **Launch** | Hosting and checks on real phones | Planned |
 | **V2: Progress** | Analytics and charts, personal records, body measurements, streaks, Google sign-in | Later |
 | **V3: Guidance** | Ready-made programs, exercise videos, suggestions for when to increase weight | Later |
@@ -92,7 +93,7 @@ Gym Kori is in active development and hasn't launched yet. V1 currently runs loc
 | On-device storage | [Dexie](https://dexie.org) (IndexedDB) |
 | Tests | [Vitest](https://vitest.dev) and [Playwright](https://playwright.dev) |
 | Linting | [Biome](https://biomejs.dev) |
-| Accounts and database (planned) | [Supabase](https://supabase.com) |
+| Accounts and database | [Supabase](https://supabase.com) |
 | Hosting (planned) | [Vercel](https://vercel.com) |
 
 ## Getting started
@@ -101,6 +102,12 @@ You'll need [Node.js](https://nodejs.org) 24 or newer, the version the project i
 
 ```bash
 npm install
+cp .env.example .env.local
+```
+
+Add your Supabase project URL and publishable key to `.env.local`, then run each file in `supabase/migrations/` in the Supabase SQL editor, in order. Never put a secret or `service_role` key in this file.
+
+```bash
 npm run dev
 ```
 
@@ -129,8 +136,9 @@ Open the **Network** address it prints. Browsers limit some features on plain `h
 | `npm test` | Runs the unit tests |
 | `npm run test:e2e` | Runs the browser tests |
 | `npm run check` | Runs types, lint, unit tests and browser tests |
+| `npm run verify:supabase` | Checks the real Supabase project's data protection, using temporary accounts |
 
-The browser tests need a one-time setup:
+The browser tests use a fake Supabase, so they never touch a real project. They need a one-time setup:
 
 ```bash
 npx playwright install chromium
@@ -144,7 +152,8 @@ Every action saves to the device immediately and never waits for the network. Sc
 flowchart LR
     A[Screens] -->|every tap| B[(Dexie on the phone)]
     B -->|live updates| A
-    B -.->|planned sync| C[(Supabase)]
+    A -->|login and profile| C[(Supabase)]
+    B -.->|planned sync| C
 ```
 
 These rules keep the data trustworthy:
@@ -154,6 +163,8 @@ These rules keep the data trustworthy:
 - **Workouts keep their own copy of what happened.** Editing or deleting a routine leaves past workouts alone.
 - **Deletes are recorded, not erased.** Rows keep a delete time so the change can sync to other devices later.
 - **A workout belongs to the day it started**, even if it runs past midnight.
+- **Each account has its own data on the device**, so people sharing a phone can't see each other's workouts, and logging out loses nothing.
+- **The publishable key is safe in the app.** Row-level security in Postgres is what protects each person's data.
 
 ### Data model
 
@@ -170,6 +181,7 @@ erDiagram
 
 ```
 src/
+├── auth/          Login, session and profile sync
 ├── components/    Shared interface pieces
 ├── data/          Database, business rules and data hooks
 ├── i18n/          English and Bangla text
@@ -177,9 +189,12 @@ src/
 ├── preferences/   Language, theme and unit settings
 ├── screens/       One file per screen
 ├── styles/        Theme variables and shared styles
+├── utils/         The Supabase client
 └── workout/       Rest timer and keep-awake behavior
 e2e/               Browser tests
 docs/              Build plan and screenshots
+scripts/           Checks against the real Supabase project
+supabase/          Database migrations
 ```
 
 ## Development guide

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './support';
 
 const THEMES = [
   ['modern', 'Modern', 'rgb(17, 24, 39)'],

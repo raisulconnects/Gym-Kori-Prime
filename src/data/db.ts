@@ -68,7 +68,7 @@ export interface WorkoutSet extends Synced {
   done: boolean;
 }
 
-class GymKoriDatabase extends Dexie {
+export class GymKoriDatabase extends Dexie {
   routines!: EntityTable<Routine, 'id'>;
   routineExercises!: EntityTable<RoutineExercise, 'id'>;
   customExercises!: EntityTable<CustomExercise, 'id'>;
@@ -77,8 +77,8 @@ class GymKoriDatabase extends Dexie {
   workoutExercises!: EntityTable<WorkoutExercise, 'id'>;
   workoutSets!: EntityTable<WorkoutSet, 'id'>;
 
-  constructor() {
-    super('gym-kori');
+  constructor(name: string) {
+    super(name);
     this.version(1).stores({
       routines: 'id',
       routineExercises: 'id, routineId',
@@ -93,4 +93,46 @@ class GymKoriDatabase extends Dexie {
   }
 }
 
-export const db = new GymKoriDatabase();
+/** Holds data created on this device before accounts existed. */
+const DEVICE_DATABASE = 'gym-kori';
+
+/**
+ * The signed-in user's database. Each account has its own on this device, so people sharing a
+ * phone can't see each other's workouts, and logging out loses nothing.
+ */
+export let db = new GymKoriDatabase(DEVICE_DATABASE);
+
+/** Moves data from before accounts existed into the first account to log in on this device. */
+async function adoptDeviceData(target: GymKoriDatabase) {
+  if (!(await Dexie.exists(DEVICE_DATABASE))) return;
+  const source = new GymKoriDatabase(DEVICE_DATABASE);
+  try {
+    await source.open();
+    // Read everything first, because waiting on another database would end the write below.
+    const contents = await Promise.all(
+      source.tables.map(async (table) => ({ name: table.name, rows: await table.toArray() })),
+    );
+    await target.transaction('rw', target.tables, async () => {
+      for (const { name, rows } of contents) await target.table(name).bulkPut(rows);
+    });
+    await source.delete();
+  } catch (error) {
+    // Never block login over this. The old data stays put, and the next login tries again.
+    console.error('Could not move device data into the account', error);
+    source.close();
+  }
+}
+
+export async function openUserDatabase(userId: string): Promise<void> {
+  db.close();
+  const userDatabase = new GymKoriDatabase(`${DEVICE_DATABASE}-${userId}`);
+  await userDatabase.open();
+  await adoptDeviceData(userDatabase);
+  db = userDatabase;
+}
+
+/** Permanently removes the current account's data from this device. */
+export async function deleteUserDatabase(): Promise<void> {
+  await db.delete();
+}
+

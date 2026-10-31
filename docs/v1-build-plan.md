@@ -61,7 +61,14 @@ All IDs are created on the phone so records can be made offline. Synced tables a
 ### To add in the accounts milestone
 
 - **Profile:** display name, language, theme and weight unit, stored per user.
-- **Row ownership:** every Supabase row gets a user ID and row-level security. The phone holds one signed-in user's data at a time.
+- **On the phone:** each account has its own local database, so people sharing a phone can't see each other's data and logging out loses nothing. Data created before accounts moves into the first account to log in.
+- **Row ownership:** the sync milestone gives every Supabase workout table a user ID and row-level security, as `profiles` already has.
+
+### Setting up Supabase
+
+1. Run each file in `supabase/migrations/` in the Supabase SQL editor, in order.
+2. Under Authentication, URL Configuration, set the Site URL and add the app's address to the redirect URLs.
+3. Run `npm run verify:supabase` with Confirm email turned off, to check that accounts can't reach each other's data.
 
 ## Behavior rules
 
