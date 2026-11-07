@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { NumberField } from '../components/NumberField';
-import { type ActiveSession, useActiveWorkout } from '../data/hooks';
+import { brokenKinds, RecordBadge } from '../components/Records';
+import { type ActiveSession, useActiveWorkout, useExercises } from '../data/hooks';
 import { discardWorkout, finishWorkout, isStale, suggestedMinutes } from '../data/workouts';
 import { useFormat } from '../preferences/useFormat';
 import { clearRestTimer } from '../workout/useRestTimer';
@@ -27,6 +28,11 @@ function FinishForm({ session }: { session: ActiveSession }) {
   const [error, setError] = useState(false);
   const forgotten = isStale(workout, openedAt);
   const doneCount = exercises.filter((exercise) => exercise.sets.some((set) => set.done)).length;
+  const names = useExercises();
+  const records = exercises
+    .filter((exercise) => !exercise.skipped)
+    .map((exercise) => ({ exercise, kinds: brokenKinds(exercise.records) }))
+    .filter(({ kinds }) => kinds.length > 0);
 
   async function save() {
     const value = Number(minutes);
@@ -80,6 +86,23 @@ function FinishForm({ session }: { session: ActiveSession }) {
           {t('finish.count', { done: format.number(doneCount), total: format.number(exercises.length) })}
         </span>
       </section>
+      {records.length > 0 && (
+        <section className="card flex flex-col gap-2 p-[18px]">
+          <h2 className="m-0">
+            <RecordBadge label={t('records.newRecords')} />
+          </h2>
+          <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+            {records.map(({ exercise, kinds }) => (
+              <li key={exercise.id} className="flex flex-col text-base">
+                <span lang="en" className="font-bold break-words">
+                  {names?.find((option) => option.id === exercise.exerciseId)?.name}
+                </span>
+                <span className="text-[15px] text-muted">{kinds.map((kind) => t(`records.${kind}`)).join(' · ')}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <label className="flex flex-col gap-1.5 text-[15px] font-semibold">
         {t('finish.note')}
         <textarea

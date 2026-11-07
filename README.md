@@ -46,6 +46,7 @@ Gym Kori is in active development and hasn't launched yet. V1 has a test deploym
 | **History** | Review weekly attendance, missed days, and the full details of past workouts |
 | **Recovery** | Reopen the app to return to a running workout, and get asked to check the duration if you forgot to finish |
 | **Accounts** | Sign up, log in, reset your password, edit your name, log out, or delete your account |
+| **Progress** | See each exercise's personal records and past sessions, get a "New record" badge when you beat one, and see the record to beat during a workout |
 | **Backup and sync** | Keep routines, schedules and workouts on every device you log in to, and see when something hasn't backed up yet |
 | **Offline** | Install the app on your home screen and open it with no signal |
 | **About you** | Optionally save your gender, height and body weight, with a dated history of your weight |

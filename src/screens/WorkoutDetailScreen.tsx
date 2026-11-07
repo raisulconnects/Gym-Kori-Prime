@@ -1,4 +1,5 @@
 import { Check, ChevronLeft } from 'lucide-react';
+import { RecordBadge } from '../components/Records';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import type { WorkoutSet } from '../data/db';
@@ -62,7 +63,9 @@ export function WorkoutDetailScreen() {
             <section key={exercise.id} className="card flex flex-col gap-1.5 px-3.5 py-3">
               <div className="flex items-start justify-between gap-2">
                 <h2 lang="en" className="display text-[22px] leading-[1.25] break-words">
-                  {name}
+                  <Link to={`/progress/${exercise.exerciseId}`} className="text-heading underline-offset-4">
+                    {name}
+                  </Link>
                 </h2>
                 {(exercise.skipped || exercise.extra) && (
                   <span className="shrink-0 text-sm font-bold text-accent">
@@ -70,13 +73,17 @@ export function WorkoutDetailScreen() {
                   </span>
                 )}
               </div>
+              {exercise.records.volume && <RecordBadge label={t('records.volume')} />}
               <ol className="m-0 flex list-none flex-col gap-1 p-0">
                 {exercise.sets.map((set, index) => (
                   <li key={set.id} className="flex min-h-7 items-center gap-2 text-base">
                     <span className="w-6 shrink-0 font-bold">{format.number(index + 1)}</span>
                     {set.done ? (
                       <>
-                        <span className="flex-1 font-medium">{setText(set)}</span>
+                        <span className="flex flex-1 flex-wrap items-center gap-x-2 font-medium">
+                          {setText(set)}
+                          {exercise.records.bySet[set.id] && <RecordBadge />}
+                        </span>
                         <Check aria-label={t('workout.done')} size={20} strokeWidth={3} className="shrink-0" />
                       </>
                     ) : (

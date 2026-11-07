@@ -14,6 +14,18 @@ import {
   type WorkoutSet,
 } from './db';
 import { BUILT_IN_EXERCISES, type ExerciseOption } from './exerciseCatalog';
+import {
+  type ExerciseRecords,
+  type ExerciseSession,
+  exerciseRecords,
+  groupSessions,
+  loadExerciseSessions,
+  newRecordsIn,
+  type SessionRecords,
+  sessionsBefore,
+  sessionsWithRecords,
+  toSession,
+} from './records';
 import { scheduleOn } from './store';
 import { getSyncStatus, subscribeToSyncStatus, type SyncStatus } from './sync';
 import { loadLastPerformance, type PastSet } from './workouts';
@@ -57,6 +69,10 @@ export function useExercises(): ExerciseOption[] | undefined {
 export interface SessionExercise extends WorkoutExercise {
   sets: WorkoutSet[];
   last: PastSet[] | null;
+  /** The records to beat from earlier workouts. Null the first time this exercise is done. */
+  best: ExerciseRecords | null;
+  /** Records broken so far in this workout. */
+  records: SessionRecords;
 }
 
 export interface ActiveSession {
@@ -82,13 +98,19 @@ export function useActiveWorkout(): ActiveSession | null | undefined {
       entries
         .filter((entry) => !entry.deletedAt)
         .sort((first, second) => first.position - second.position)
-        .map(async (entry) => ({
-          ...entry,
-          sets: sets
+        .map(async (entry) => {
+          const entrySets = sets
             .filter((set) => set.workoutExerciseId === entry.id && !set.deletedAt)
-            .sort((first, second) => first.position - second.position),
-          last: await loadLastPerformance(entry.exerciseId, workout.id),
-        })),
+            .sort((first, second) => first.position - second.position);
+          const earlier = sessionsBefore(await loadExerciseSessions(entry.exerciseId), workout.startedAt, workout.id);
+          return {
+            ...entry,
+            sets: entrySets,
+            last: await loadLastPerformance(entry.exerciseId, workout.id),
+            best: earlier.length > 0 ? exerciseRecords(earlier) : null,
+            records: newRecordsIn(toSession(workout, entrySets), earlier),
+          };
+        }),
     );
     return { workout, exercises };
   });
@@ -181,7 +203,8 @@ export function useWeekHistory(weekDate: Date, today: string): WeekHistory | und
 
 export interface WorkoutDetail {
   workout: Workout;
-  exercises: (WorkoutExercise & { sets: WorkoutSet[] })[];
+  /** Each exercise with its sets, and the records it broke compared with earlier workouts. */
+  exercises: (WorkoutExercise & { sets: WorkoutSet[]; records: SessionRecords })[];
 }
 
 /** A saved workout with everything logged in it. Null if not found, undefined while loading. */
@@ -193,19 +216,76 @@ export function useWorkoutDetail(workoutId: string): WorkoutDetail | null | unde
       db.workoutExercises.where('workoutId').equals(workoutId).toArray(),
       db.workoutSets.where('workoutId').equals(workoutId).toArray(),
     ]);
-    return {
-      workout,
-      exercises: entries
+    const exercises = await Promise.all(
+      entries
         .filter((entry) => !entry.deletedAt)
         .sort((first, second) => first.position - second.position)
-        .map((entry) => ({
-          ...entry,
-          sets: sets
+        .map(async (entry) => {
+          const entrySets = sets
             .filter((set) => set.workoutExerciseId === entry.id && !set.deletedAt)
-            .sort((first, second) => first.position - second.position),
-        })),
-    };
+            .sort((first, second) => first.position - second.position);
+          const earlier = sessionsBefore(await loadExerciseSessions(entry.exerciseId), workout.startedAt, workout.id);
+          const records = entry.skipped
+            ? { bySet: {}, volume: false }
+            : newRecordsIn(toSession(workout, entrySets), earlier);
+          return { ...entry, sets: entrySets, records };
+        }),
+    );
+    return { workout, exercises };
   }, [workoutId]);
+}
+
+export interface ExerciseProgress {
+  exerciseId: string;
+  name: string;
+  records: ExerciseRecords;
+  /** The last day this exercise was done. */
+  lastDate: string;
+}
+
+/** Names for every exercise, including custom ones deleted later, since old workouts still use them. */
+async function exerciseNames(): Promise<Map<string, string>> {
+  const custom = await db.customExercises.toArray();
+  return new Map([...BUILT_IN_EXERCISES, ...custom].map((exercise) => [exercise.id, exercise.name]));
+}
+
+/** Every exercise done at least once, with its records, most recently done first. Undefined while loading. */
+export function useExerciseProgressList(): ExerciseProgress[] | undefined {
+  return useLiveQuery(async () => {
+    const [workouts, entries, sets, names] = await Promise.all([
+      db.workouts.toArray(),
+      db.workoutExercises.toArray(),
+      db.workoutSets.toArray(),
+      exerciseNames(),
+    ]);
+    return [...groupSessions(workouts, entries, sets)]
+      .map(([exerciseId, sessions]) => ({
+        exerciseId,
+        name: names.get(exerciseId) ?? '',
+        records: exerciseRecords(sessions),
+        lastDate: sessions[sessions.length - 1]?.localDate ?? '',
+      }))
+      .sort((first, second) => second.lastDate.localeCompare(first.lastDate));
+  });
+}
+
+export interface ExerciseHistory {
+  name: string;
+  records: ExerciseRecords;
+  /** Newest first, each with the records it broke at the time. */
+  sessions: (ExerciseSession & { records: SessionRecords })[];
+}
+
+/** One exercise's records and past sessions. Undefined while loading. */
+export function useExerciseHistory(exerciseId: string): ExerciseHistory | undefined {
+  return useLiveQuery(async () => {
+    const [sessions, names] = await Promise.all([loadExerciseSessions(exerciseId), exerciseNames()]);
+    return {
+      name: names.get(exerciseId) ?? '',
+      records: exerciseRecords(sessions),
+      sessions: sessionsWithRecords(sessions),
+    };
+  }, [exerciseId]);
 }
 
 /** The most recent saved body weight. Null if none, undefined while loading. */

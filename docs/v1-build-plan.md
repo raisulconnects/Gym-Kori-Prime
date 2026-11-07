@@ -176,3 +176,48 @@ Each milestone ends with something that can be tried on a phone, using `npm run 
 ## Not in V1
 
 Analytics and charts, personal records, measurements beyond body weight, streaks, ready-made programs, exercise videos, weight suggestions, social features, wearable sync, nutrition, AI coaching, and the native app.
+
+## After V1
+
+V1's launch check comes first. Later versions start only after it passes, and each milestone gets its own branch as before.
+
+### V2: Progress
+
+The goal is to show people they're getting stronger, mostly from data V1 already collects. The same rules as V1 still apply: themes and translations stay out of screen code, the phone saves first, and every table has row-level security.
+
+| # | Milestone | What it adds | Builds on |
+|---|---|---|---|
+| 1 | **Exercise history and personal records** | Each exercise's past sessions, the heaviest weight, best set and estimated one-rep max, with a mark when a record is beaten during a workout | Sets already logged |
+| 2 | **Progress charts** | Strength over time per exercise, weekly training volume, and body weight over time | Sets and `body_weights` |
+| 3 | **Streaks** | Weeks in a row with all planned gym days done, shown on Today and History | Attendance and the weekly schedule |
+| 4 | **More body measurements** | Optional chest, arms, waist and others, with dated history | A new table shaped like `body_weights` |
+| 5 | **Google sign-in** | Signing up and logging in with a Google account, alongside email and password | Supabase Auth |
+
+**Done when:** a user can open any exercise and see their records and progress chart, see their streak, and track their body over time, in all 6 theme and language combinations, offline as well as online.
+
+#### Gaps to fill first
+
+- **Time and distance sets:** Plank and Treadmill are logged as reps today. Add a type to each exercise (weight and reps, time, or distance) and optional duration and distance columns on sets, before charts are built for them.
+- **Muscle groups:** add a muscle group to each built-in exercise and let people set one on their own exercises. Charts by muscle group need this.
+- **Weekly volume rules:** decide whether warm-up and skipped sets count. Only sets marked done count by default.
+
+#### Decided for milestone 1 (built)
+
+- **Where:** a fourth bottom tab, **Progress**, lists every exercise done, and each opens its own screen with records and past sessions. Exercise names in past workouts link there too.
+- **Records:** heaviest weight, estimated 1-rep max (Epley, sets of 12 reps or fewer), most reps, and best session volume. Bodyweight exercises only show most reps.
+- **Rules:** only done sets in finished, kept workouts count. A record must beat earlier workouts, so equalling one doesn't count, and the first time doing an exercise sets no records.
+- **Showing records:** a "New record" badge and a short vibration on the set, a list on the finish screen, and badges kept in past workouts. During a workout, the record to beat appears next to "Last time".
+- **Stored:** nowhere. Records are worked out from the logged sets, so they need no syncing and disappear with a discarded workout.
+
+#### To decide before later milestones
+
+- Whether a streak counts weeks with every planned day done, or any gym day.
+- Which chart library to use. It must work offline and follow the theme colors.
+
+### V3: Guidance
+
+Ready-made programs, exercise videos, and suggestions for when to increase the weight.
+
+### V4: Extras
+
+The native app (Capacitor), social features, wearable sync, nutrition and AI coaching.

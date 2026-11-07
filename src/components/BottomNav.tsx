@@ -1,4 +1,4 @@
-import { CalendarDays, Dumbbell, ListChecks } from 'lucide-react';
+import { CalendarDays, Dumbbell, ListChecks, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
@@ -6,6 +6,7 @@ const ITEMS = [
   { to: '/today', key: 'nav.today', Icon: Dumbbell },
   { to: '/routines', key: 'nav.routines', Icon: ListChecks },
   { to: '/history', key: 'nav.history', Icon: CalendarDays },
+  { to: '/progress', key: 'nav.progress', Icon: TrendingUp },
 ] as const;
 
 export function BottomNav() {
@@ -13,7 +14,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label={t('nav.mainMenu')}
-      className="sticky bottom-0 grid shrink-0 grid-cols-3 bg-nav px-2 pt-1 pb-[max(12px,env(safe-area-inset-bottom))]"
+      className="sticky bottom-0 grid shrink-0 grid-cols-4 bg-nav px-2 pt-1 pb-[max(12px,env(safe-area-inset-bottom))]"
       style={{ borderTop: 'var(--nav-line)' }}
     >
       {ITEMS.map(({ to, key, Icon }) => (

@@ -5,12 +5,14 @@ import { BottomNav } from './components/BottomNav';
 import { ResumeWorkout } from './components/ResumeWorkout';
 import { ThemeBand } from './components/ThemeDecorations';
 import { usePreferences } from './preferences/PreferencesContext';
+import { ExerciseScreen } from './screens/ExerciseScreen';
 import { FinishWorkoutScreen } from './screens/FinishWorkoutScreen';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { LanguageScreen } from './screens/LanguageScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
+import { ProgressScreen } from './screens/ProgressScreen';
 import { RoutineEditorScreen } from './screens/RoutineEditorScreen';
 import { RoutinesScreen } from './screens/RoutinesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -71,8 +73,10 @@ export function App() {
                   <Route path="/today" element={<TodayScreen />} />
                   <Route path="/routines" element={<RoutinesScreen />} />
                   <Route path="/history" element={<HistoryScreen />} />
+                  <Route path="/progress" element={<ProgressScreen />} />
                 </Route>
                 <Route path="/history/:workoutId" element={<WorkoutDetailScreen />} />
+                <Route path="/progress/:exerciseId" element={<ExerciseScreen />} />
                 <Route path="/workout" element={<WorkoutScreen />} />
                 <Route path="/workout/finish" element={<FinishWorkoutScreen />} />
                 <Route path="/routines/new" element={<RoutineEditorScreen />} />

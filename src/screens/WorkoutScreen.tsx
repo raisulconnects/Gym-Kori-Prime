@@ -1,10 +1,12 @@
 import { Check, ChevronLeft, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ExercisePicker } from '../components/ExercisePicker';
 import { LiveNumberField } from '../components/LiveNumberField';
+import { RecordBadge, useRecordText } from '../components/Records';
 import type { WorkoutSet } from '../data/db';
+import type { ExerciseRecords } from '../data/records';
 import { type ActiveSession, type SessionExercise, useActiveWorkout, useExercises, useTicker } from '../data/hooks';
 import { addExtraExercise, addSet, type PastSet, updateExercise, updateSet } from '../data/workouts';
 import { formatClock, formatWeight, parseReps, parseWeight } from '../lib/units';
@@ -176,9 +178,10 @@ function Session({ session, nameOf }: { session: ActiveSession; nameOf: (exercis
   );
 }
 
-function useLastTimeText(last: PastSet[] | null, unit: Unit) {
+function useLastTimeText(last: PastSet[] | null, best: ExerciseRecords | null, unit: Unit) {
   const { t } = useTranslation();
   const format = useFormat();
+  const recordText = useRecordText();
   if (!last) return t('workout.firstTime');
 
   const unitName = t(`units.${unit}`);
@@ -192,7 +195,8 @@ function useLastTimeText(last: PastSet[] | null, unit: Unit) {
         .filter(Boolean)
         .join(' × ')
     : last.map((set) => `${weightText(set.weightKg)} × ${repsText(set.reps)}`).join(', ');
-  return t('workout.lastTime', { value });
+  const bestText = best ? recordText.best(best) : null;
+  return bestText ? t('workout.lastAndBest', { value, best: bestText }) : t('workout.lastTime', { value });
 }
 
 function ExerciseCard({
@@ -210,7 +214,16 @@ function ExerciseCard({
   const { unit } = usePreferences();
   const [noteOpen, setNoteOpen] = useState(exercise.note !== '');
   const [note, setNote] = useState(exercise.note);
-  const lastTime = useLastTimeText(exercise.last, unit);
+  const lastTime = useLastTimeText(exercise.last, exercise.best, unit);
+  const recordSetIds = Object.keys(exercise.records.bySet).join(',');
+  const seenRecords = useRef(recordSetIds);
+
+  // A short buzz when a ticked set becomes a record. Phones without vibration simply skip it.
+  useEffect(() => {
+    const before = new Set(seenRecords.current.split(','));
+    if (recordSetIds.split(',').some((id) => id && !before.has(id))) navigator.vibrate?.(30);
+    seenRecords.current = recordSetIds;
+  }, [recordSetIds]);
 
   return (
     <section className="card flex shrink-0 flex-col gap-2 px-3.5 py-3">
@@ -227,7 +240,14 @@ function ExerciseCard({
         <span className="text-center">{t('workout.done')}</span>
       </div>
       {exercise.sets.map((set, index) => (
-        <SetRow key={set.id} set={set} number={index + 1} unit={unit} onDone={onSetDone} />
+        <SetRow
+          key={set.id}
+          set={set}
+          number={index + 1}
+          unit={unit}
+          record={set.done && Boolean(exercise.records.bySet[set.id])}
+          onDone={onSetDone}
+        />
       ))}
       {noteOpen && (
         <label className="flex flex-col gap-1 text-sm font-semibold">
@@ -277,11 +297,13 @@ function SetRow({
   set,
   number,
   unit,
+  record,
   onDone,
 }: {
   set: WorkoutSet;
   number: number;
   unit: Unit;
+  record: boolean;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -289,6 +311,7 @@ function SetRow({
   const shown = format.number(number);
 
   return (
+    <>
     <div className={SET_GRID}>
       <span className="text-xl font-bold">{shown}</span>
       <LiveNumberField
@@ -321,5 +344,11 @@ function SetRow({
         {set.done && <Check aria-hidden="true" size={24} strokeWidth={3} />}
       </button>
     </div>
+    {record && (
+      <p role="status" className="m-0 -mt-1 pl-11">
+        <RecordBadge />
+      </p>
+    )}
+    </>
   );
 }
