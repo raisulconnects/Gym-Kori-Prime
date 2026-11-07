@@ -36,6 +36,75 @@ async function createAccount(label) {
   return { client, id: data.user.id, email, password };
 }
 
+const EARLIER = '2026-01-01T08:00:00.000Z';
+const NOW = '2026-01-01T09:00:00.000Z';
+const LATER = '2026-01-01T10:00:00.000Z';
+
+/** The fields each backed-up table needs, besides the ones they all share. */
+const SYNCED_TABLES = {
+  routines: { name: 'Test', created_at: NOW },
+  routine_exercises: { routine_id: 'r', exercise_id: 'e', position: 0, sets: 3, reps: 8 },
+  custom_exercises: { name: 'Test' },
+  weekly_schedules: { effective_from: '2026-01-01', days: [null, null, null, null, null, null, null] },
+  workouts: {
+    local_date: '2026-01-01',
+    routine_name: 'Test',
+    status: 'finished',
+    started_at: NOW,
+    last_activity_at: NOW,
+  },
+  workout_exercises: { workout_id: 'w', exercise_id: 'e', position: 0 },
+  workout_sets: { workout_id: 'w', workout_exercise_id: 'x', position: 0, weight_kg: 62.5, reps: 8 },
+  body_weights: { local_date: '2026-01-01', weight_kg: 72.5 },
+};
+
+/** Every table must keep each account's rows private, and let the most recent change win. */
+async function checkSyncedTable(table, fields, owner, other, anonymous) {
+  const id = crypto.randomUUID();
+  const row = { ...fields, id, user_id: owner.id, updated_at: NOW };
+  const upsert = (client, values) => client.from(table).upsert(values, { onConflict: 'user_id,id' });
+  const read = (client) => client.from(table).select('*').eq('id', id);
+
+  const saved = await upsert(owner.client, row);
+  check(`${table}: people can back up their own rows`, !saved.error, saved.error?.message);
+  const own = await read(owner.client);
+  check(`${table}: people can read their own rows`, own.data?.length === 1, own.error?.message);
+  const firstSyncedAt = own.data?.[0]?.synced_at;
+
+  const signedOut = await read(anonymous);
+  check(`${table}: signed-out visitors cannot read rows`, Boolean(signedOut.error) || signedOut.data?.length === 0);
+  const signedOutWrite = await upsert(anonymous, { ...row, id: crypto.randomUUID() });
+  check(`${table}: signed-out visitors cannot add rows`, Boolean(signedOutWrite.error));
+
+  const seen = await read(other.client);
+  check(`${table}: another account cannot read the row`, seen.data?.length === 0, seen.error?.message);
+  const everything = await other.client.from(table).select('id');
+  check(`${table}: another account sees none of it`, everything.data?.length === 0, everything.error?.message);
+
+  const planted = await upsert(other.client, { ...row, id: crypto.randomUUID() });
+  check(`${table}: an account cannot add rows for someone else`, Boolean(planted.error));
+  const changed = await other.client.from(table).update({ updated_at: LATER }).eq('id', id).select();
+  check(`${table}: another account cannot change the row`, (changed.data?.length ?? 0) === 0);
+  const removedByOther = await other.client.from(table).delete().eq('id', id).select();
+  check(`${table}: another account cannot erase the row`, (removedByOther.data?.length ?? 0) === 0);
+  const removedByOwner = await owner.client.from(table).delete().eq('id', id).select();
+  check(`${table}: rows can't be erased, only marked as deleted`, (removedByOwner.data?.length ?? 0) === 0);
+
+  // The same ID in another account must be a separate row, not a clash with this one.
+  const sameId = await upsert(other.client, { ...row, user_id: other.id });
+  check(`${table}: two accounts can use the same ID separately`, !sameId.error, sameId.error?.message);
+
+  await upsert(owner.client, { ...row, updated_at: EARLIER, deleted_at: EARLIER });
+  const afterOlder = await read(owner.client);
+  check(`${table}: an older change does not overwrite a newer one`, afterOlder.data?.[0]?.deleted_at === null);
+  check(`${table}: an ignored change is not sent to other devices`, afterOlder.data?.[0]?.synced_at === firstSyncedAt);
+
+  await upsert(owner.client, { ...row, updated_at: LATER, deleted_at: LATER });
+  const afterNewer = await read(owner.client);
+  check(`${table}: a newer change wins`, Boolean(afterNewer.data?.[0]?.deleted_at));
+  check(`${table}: a newer change is sent to other devices`, afterNewer.data?.[0]?.synced_at > firstSyncedAt);
+}
+
 const anonymous = newClient();
 const anonymousRead = await anonymous.from('profiles').select('id');
 check('signed-out visitors see no profiles', !anonymousRead.error ? anonymousRead.data.length === 0 : true);
@@ -85,6 +154,19 @@ try {
 
   const signedOutDelete = await anonymous.rpc('delete_own_account');
   check('signed-out visitors cannot call account deletion', Boolean(signedOutDelete.error));
+
+  const details = await first.client
+    .from('profiles')
+    .update({ gender: 'female', height_cm: 170.2 })
+    .eq('id', first.id)
+    .select();
+  check('people can save their gender and height', details.data?.[0]?.height_cm === 170.2, details.error?.message);
+  const badHeight = await first.client.from('profiles').update({ height_cm: 5 }).eq('id', first.id);
+  check('impossible heights are refused', Boolean(badHeight.error));
+
+  for (const [table, fields] of Object.entries(SYNCED_TABLES)) {
+    await checkSyncedTable(table, fields, first, second, anonymous);
+  }
 } finally {
   for (const account of [first, second]) {
     const { error } = await account.client.rpc('delete_own_account');

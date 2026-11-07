@@ -81,7 +81,12 @@ export function scheduleOn(schedules: WeeklySchedule[], date: string): WeekPlan 
   let latest: WeeklySchedule | undefined;
   for (const schedule of schedules) {
     if (schedule.deletedAt || schedule.effectiveFrom > date) continue;
-    if (!latest || schedule.effectiveFrom > latest.effectiveFrom) latest = schedule;
+    // Two devices can each start a new version on the same day. The later change wins.
+    const isNewer =
+      !latest ||
+      schedule.effectiveFrom > latest.effectiveFrom ||
+      (schedule.effectiveFrom === latest.effectiveFrom && schedule.updatedAt > latest.updatedAt);
+    if (isNewer) latest = schedule;
   }
   return latest?.days ?? REST_WEEK;
 }

@@ -114,3 +114,12 @@ describe('addCustomExercise', () => {
     expect(await db.customExercises.count()).toBe(1);
   });
 });
+
+describe('scheduleOn with two versions from the same day', () => {
+  it('uses the later change, whichever order they arrive in', () => {
+    const earlier = { id: 'a', effectiveFrom: '2026-10-31', days: Array(7).fill('old'), updatedAt: '2026-10-31T08:00:00.000Z' };
+    const later = { id: 'b', effectiveFrom: '2026-10-31', days: Array(7).fill('new'), updatedAt: '2026-10-31T09:00:00.000Z' };
+    expect(scheduleOn([earlier, later], '2026-10-31')[0]).toBe('new');
+    expect(scheduleOn([later, earlier], '2026-10-31')[0]).toBe('new');
+  });
+});

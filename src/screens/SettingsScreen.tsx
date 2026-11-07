@@ -3,6 +3,8 @@ import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { AboutYouCard } from '../components/AboutYouCard';
+import { BackupCard } from '../components/BackupCard';
 import { useActiveWorkout } from '../data/hooks';
 import { LANGUAGES, type Language, THEMES, type Theme, UNITS } from '../preferences/preferences';
 import { usePreferences } from '../preferences/PreferencesContext';
@@ -117,6 +119,8 @@ export function SettingsScreen() {
         <h1 className="display text-[38px]">{t('settings.title')}</h1>
 
         <ProfileCard />
+        <AboutYouCard />
+        <BackupCard />
 
         <OptionGroup title={t('settings.language')} className="grid grid-cols-2 gap-2">
           {LANGUAGES.map((option) => (

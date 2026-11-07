@@ -16,6 +16,12 @@ export function toLocalDate(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+/** Turns a saved YYYY-MM-DD date back into a date on the user's calendar. */
+export function fromLocalDate(localDate: string): Date {
+  const [year = 0, month = 1, day = 1] = localDate.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function isSameDay(first: Date, second: Date): boolean {
   return (
     first.getFullYear() === second.getFullYear() &&

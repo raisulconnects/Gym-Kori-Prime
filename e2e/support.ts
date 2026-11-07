@@ -10,7 +10,11 @@ interface FakeProfile {
   language: string | null;
   theme: string | null;
   unit: string | null;
+  gender?: string | null;
+  height_cm?: number | null;
 }
+
+type FakeRow = Record<string, unknown>;
 
 interface FakeUser {
   id: string;
@@ -31,6 +35,17 @@ function publicUser(user: FakeUser, profile: FakeProfile | undefined) {
   };
 }
 
+const SYNCED_TABLES = [
+  'routines',
+  'routine_exercises',
+  'custom_exercises',
+  'weekly_schedules',
+  'workouts',
+  'workout_exercises',
+  'workout_sets',
+  'body_weights',
+];
+
 /** An in-memory stand-in for Supabase, so tests never touch the real project. */
 export class FakeBackend {
   users: FakeUser[] = [];
@@ -38,6 +53,35 @@ export class FakeBackend {
   requireConfirmation = false;
   resetRequests: string[] = [];
   failing = false;
+  rejectRefresh = false;
+  /** Backed-up rows per table, keyed by owner and row ID, like the real primary keys. */
+  synced = new Map<string, Map<string, FakeRow>>();
+  private syncClock = Date.parse('2026-01-01T00:00:00Z');
+
+  /** Everything backed up to one table, for tests to check. */
+  rows(table: string): FakeRow[] {
+    return [...(this.synced.get(table)?.values() ?? [])];
+  }
+
+  /** Newest change wins, as the database trigger does. */
+  private upsert(table: string, rows: FakeRow[]) {
+    const store = this.synced.get(table) ?? new Map<string, FakeRow>();
+    this.synced.set(table, store);
+    for (const row of rows) {
+      const key = `${row.user_id}:${row.id}`;
+      const existing = store.get(key);
+      if (existing && Date.parse(row.updated_at as string) <= Date.parse(existing.updated_at as string)) continue;
+      this.syncClock += 1000;
+      store.set(key, { ...row, synced_at: new Date(this.syncClock).toISOString() });
+    }
+  }
+
+  private select(table: string, userId: string, since: string | undefined, limit: number) {
+    return this.rows(table)
+      .filter((row) => row.user_id === userId && (!since || (row.synced_at as string) > since))
+      .sort((first, second) => (first.synced_at as string).localeCompare(second.synced_at as string))
+      .slice(0, limit);
+  }
 
   addUser(email: string, password: string, profile: Partial<FakeProfile> = {}) {
     const user = { id: `user-${this.users.length + 1}`, email, password };
@@ -92,7 +136,10 @@ export class FakeBackend {
       return reply(200, this.session(user));
     }
     if (pathname === '/auth/v1/token') {
-      const user = this.users.find((candidate) => candidate.email === body.email && candidate.password === body.password);
+      if (this.rejectRefresh) {
+        return reply(400, { code: 400, error_code: 'refresh_token_not_found', msg: 'Invalid Refresh Token' });
+      }
+      const user =this.users.find((candidate) => candidate.email === body.email && candidate.password === body.password);
       if (!user) return reply(400, { code: 400, error_code: 'invalid_credentials', msg: 'Invalid login credentials' });
       return reply(200, this.session(user));
     }
@@ -125,6 +172,18 @@ export class FakeBackend {
         return reply(204);
       }
       return reply(200, [profile]);
+    }
+    const table = pathname.replace('/rest/v1/', '');
+    if (SYNCED_TABLES.includes(table)) {
+      if (!user) return reply(401, { message: 'Not signed in' });
+      if (request.method() === 'POST') {
+        const rows = (Array.isArray(body) ? body : [body]) as FakeRow[];
+        if (rows.some((row) => row.user_id !== user.id)) return reply(403, { message: 'Row-level security' });
+        this.upsert(table, rows);
+        return reply(201);
+      }
+      const since = searchParams.get('synced_at')?.replace('gt.', '');
+      return reply(200, this.select(table, user.id, since, Number(searchParams.get('limit') ?? 1000)));
     }
     return reply(404, { message: `Not faked: ${pathname}` });
   }

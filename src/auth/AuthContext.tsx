@@ -2,9 +2,20 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, deleteUserDatabase, openUserDatabase } from '../data/db';
-import { LANGUAGES, type Language, type Theme, THEMES, type Unit, UNITS } from '../preferences/preferences';
+import { startSync, syncNow } from '../data/sync';
+import { createSupabaseRemote } from '../data/syncRemote';
+import {
+  type Gender,
+  GENDERS,
+  LANGUAGES,
+  type Language,
+  type Theme,
+  THEMES,
+  type Unit,
+  UNITS,
+} from '../preferences/preferences';
 import { usePreferences } from '../preferences/PreferencesContext';
-import { supabase } from '../utils/supabase';
+import { AUTH_STORAGE_KEY, supabase } from '../utils/supabase';
 import { authErrorKey } from './authErrors';
 
 /** Set when a preference change couldn't reach the server, so it's retried later. */
@@ -27,6 +38,28 @@ function isPending() {
   }
 }
 
+/** How long logging out waits for the last changes to back up. */
+const LOG_OUT_SYNC_MS = 3000;
+
+/**
+ * With no signal and an expired token, Supabase reports no session even though it's still saved.
+ * A real logout erases the saved one, so if it's there, the person is still logged in.
+ */
+function withSavedSession(session: Session | null): Session | null {
+  if (session) return session;
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) ?? 'null') as Session | null;
+    return saved?.user?.id ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface BodyDetails {
+  gender: Gender | null;
+  heightCm: number | null;
+}
+
 export type AuthStatus = 'loading' | 'signedOut' | 'signedIn';
 
 /** A failed action gives back a translation key for its message. */
@@ -37,6 +70,9 @@ interface AuthValue {
   userId: string | null;
   email: string;
   displayName: string;
+  /** Null until read from the server, which needs a connection. */
+  bodyDetails: BodyDetails | null;
+  updateBodyDetails: (changes: Partial<BodyDetails>) => Promise<Result>;
   signIn: (email: string, password: string) => Promise<Result>;
   signUp: (name: string, email: string, password: string) => Promise<Result & { needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
@@ -47,6 +83,9 @@ interface AuthValue {
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
+
+/** A status of 0 means the server never answered, so the connection is the likely problem. */
+const saveErrorKey = (status: number) => (status === 0 ? 'auth.errorNetwork' : 'auth.errorGeneric');
 
 const asResult = (error: Parameters<typeof authErrorKey>[0] | null): Result => ({
   error: error ? authErrorKey(error) : null,
@@ -63,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [openedUserId, setOpenedUserId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [bodyDetails, setBodyDetails] = useState<BodyDetails | null>(null);
   const syncedPreferences = useRef<string | null>(null);
 
   const user = session?.user ?? null;
@@ -70,9 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const preferencesKey = JSON.stringify({ language, theme, unit });
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    void supabase.auth.getSession().then(({ data }) => setSession(withSavedSession(data.session)));
     const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      setSession(nextSession);
+      setSession(withSavedSession(nextSession));
       if (event === 'PASSWORD_RECOVERY') navigate('/reset-password');
     });
     return () => data.subscription.unsubscribe();
@@ -84,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     syncedPreferences.current = null;
     setOpenedUserId(null);
     setProfileName(null);
+    setBodyDetails(null);
     if (!userId) return;
     void openUserDatabase(userId).then(() => {
       if (!cancelled) setOpenedUserId(userId);
@@ -92,6 +133,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [userId]);
+
+  // Backs up this account's data for as long as it's logged in.
+  useEffect(() => {
+    if (!openedUserId) return;
+    return startSync(db, createSupabaseRemote(openedUserId));
+  }, [openedUserId]);
+
+  // Read separately so it still loads later if the app opened with no signal.
+  useEffect(() => {
+    if (!openedUserId) return;
+    let cancelled = false;
+    let loaded = false;
+    const load = async () => {
+      if (loaded) return;
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', openedUserId).maybeSingle();
+      if (cancelled || error) return;
+      loaded = true;
+      setBodyDetails({
+        gender: GENDERS.includes(data?.gender) ? (data?.gender as Gender) : null,
+        heightCm: typeof data?.height_cm === 'number' ? data.height_cm : null,
+      });
+    };
+    const onOnline = () => void load();
+    void load();
+    window.addEventListener('online', onOnline);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('online', onOnline);
+    };
+  }, [openedUserId]);
 
   // The first sync never holds up the app, because the phone may have no signal at the gym.
   useEffect(() => {
@@ -180,6 +251,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userId,
       email: user?.email ?? '',
       displayName: profileName ?? metadataName,
+      bodyDetails,
+      updateBodyDetails: async (changes) => {
+        if (!userId) return { error: 'auth.errorGeneric' };
+        const columns = {
+          ...('gender' in changes && { gender: changes.gender }),
+          ...('heightCm' in changes && { height_cm: changes.heightCm }),
+        };
+        const { error, status } = await supabase.from('profiles').update(columns).eq('id', userId);
+        if (error) return { error: saveErrorKey(status) };
+        setBodyDetails((current) => (current ? { ...current, ...changes } : current));
+        return { error: null };
+      },
       signIn: async (email, password) => {
         setPending(false);
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -195,6 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ...asResult(error), needsConfirmation: !error && !data.session };
       },
       signOut: async () => {
+        await Promise.race([syncNow(), new Promise((resolve) => setTimeout(resolve, LOG_OUT_SYNC_MS))]);
         // Local scope means this works with no signal, and leaves other devices logged in.
         await supabase.auth.signOut({ scope: 'local' });
         setPending(false);
@@ -213,8 +297,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateDisplayName: async (name) => {
         const trimmed = name.trim();
         if (!userId) return { error: 'auth.errorGeneric' };
-        const { error } = await supabase.from('profiles').update({ display_name: trimmed }).eq('id', userId);
-        if (error) return { error: 'auth.errorNetwork' };
+        const { error, status } = await supabase.from('profiles').update({ display_name: trimmed }).eq('id', userId);
+        if (error) return { error: saveErrorKey(status) };
         setProfileName(trimmed);
         // Also stored with the session, so the name still shows with no signal.
         void supabase.auth.updateUser({ data: { display_name: trimmed } });
@@ -229,7 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: null };
       },
     };
-  }, [session, openedUserId, profileName, user, userId]);
+  }, [session, openedUserId, profileName, bodyDetails, user, userId]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

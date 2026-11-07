@@ -1,10 +1,15 @@
 import Dexie, { type EntityTable } from 'dexie';
 
-/** Deleted rows are kept with `deletedAt` so the delete can sync to other devices later. */
-interface Synced {
+/** Deleted rows are kept with `deletedAt` so the delete can sync to other devices. */
+export interface Synced {
   id: string;
   updatedAt: string;
   deletedAt?: string;
+  /**
+   * The `updatedAt` the server has for this row. A row needs backing up whenever the two differ,
+   * so any change that sets a new `updatedAt` is picked up without extra bookkeeping.
+   */
+  syncedUpdatedAt?: string;
 }
 
 export interface Routine extends Synced {
@@ -68,6 +73,19 @@ export interface WorkoutSet extends Synced {
   done: boolean;
 }
 
+/** One entry per day, so the history is there for progress charts later. */
+export interface BodyWeight extends Synced {
+  localDate: string;
+  /** Always kg. */
+  weightKg: number;
+}
+
+/** Sync bookkeeping for this device, such as how far it has read from the server. */
+export interface SyncStateEntry {
+  key: string;
+  value: string;
+}
+
 export class GymKoriDatabase extends Dexie {
   routines!: EntityTable<Routine, 'id'>;
   routineExercises!: EntityTable<RoutineExercise, 'id'>;
@@ -76,6 +94,8 @@ export class GymKoriDatabase extends Dexie {
   workouts!: EntityTable<Workout, 'id'>;
   workoutExercises!: EntityTable<WorkoutExercise, 'id'>;
   workoutSets!: EntityTable<WorkoutSet, 'id'>;
+  bodyWeights!: EntityTable<BodyWeight, 'id'>;
+  syncState!: EntityTable<SyncStateEntry, 'key'>;
 
   constructor(name: string) {
     super(name);
@@ -89,6 +109,10 @@ export class GymKoriDatabase extends Dexie {
       workouts: 'id, localDate, status',
       workoutExercises: 'id, workoutId, exerciseId',
       workoutSets: 'id, workoutId, workoutExerciseId',
+    });
+    this.version(3).stores({
+      bodyWeights: 'id, localDate',
+      syncState: 'key',
     });
   }
 }

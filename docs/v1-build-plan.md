@@ -34,7 +34,7 @@ V1 is ready when one person can do all of this on a real phone, in any theme and
 
 | Table | Holds |
 |---|---|
-| `profiles` | Display name, language, theme, weight unit |
+| `profiles` | Display name, language, theme, weight unit, and optional gender and height |
 | `exercises` | Built-in exercises (no owner) and users' own exercises |
 | `routines` | A user's named routines |
 | `routine_exercises` | Exercises in a routine, in order, with target sets and reps |
@@ -42,6 +42,7 @@ V1 is ready when one person can do all of this on a real phone, in any theme and
 | `workouts` | Local date, routine, start and end time, edited duration, note |
 | `workout_exercises` | Exercises in a workout, including skipped and extra ones |
 | `workout_sets` | Weight in kg, reps, done or not |
+| `body_weights` | Optional body weight in kg, one entry per day, so the history is kept |
 
 All IDs are created on the phone so records can be made offline. Synced tables also record when a row was last updated and when it was deleted.
 
@@ -56,19 +57,26 @@ All IDs are created on the phone so records can be made offline. Synced tables a
 
 - **Time and distance sets:** a set only holds weight and reps today, so Plank and Treadmill are logged as reps. Optional duration and distance columns, plus a type on each exercise, can be added later.
 - **Muscle groups:** the built-in exercise list only has names. Charts by muscle group will need this added.
-- **Body measurements:** these get their own table in V2.
+- **More body measurements:** chest, arms and others get their own table in V2. Body weight is already kept in `body_weights`.
 
-### To add in the accounts milestone
+### Accounts and ownership
 
-- **Profile:** display name, language, theme and weight unit, stored per user.
+- **Profile:** display name, language, theme and weight unit, stored per user. Gender and height are optional, and need a connection to change.
 - **On the phone:** each account has its own local database, so people sharing a phone can't see each other's data and logging out loses nothing. Data created before accounts moves into the first account to log in.
-- **Row ownership:** the sync milestone gives every Supabase workout table a user ID and row-level security, as `profiles` already has.
+- **Row ownership:** every Supabase table has a user ID and row-level security. Rows can't be erased except by deleting the account, which removes all of them.
+
+### How sync works
+
+- **What needs sending:** a row needs backing up whenever its `updatedAt` differs from the last version the server confirmed, so every change is picked up automatically.
+- **When it runs:** on opening the app, about 2 seconds after a change, on reconnecting, on returning to the app, and every minute while it's open.
+- **What's new:** the server stamps each row with the time it arrived. Devices ask for anything after the last stamp they saw, using the server's clock rather than their own.
+- **Conflicts:** each row is compared on its own, and the most recent change wins on both the device and the server.
 
 ### Setting up Supabase
 
-1. Run each file in `supabase/migrations/` in the Supabase SQL editor, in order.
+1. Run each file in `supabase/migrations/` in the Supabase SQL editor, in order. Each runs once.
 2. Under Authentication, URL Configuration, set the Site URL and add the app's address to the redirect URLs.
-3. Run `npm run verify:supabase` with Confirm email turned off, to check that accounts can't reach each other's data.
+3. Turn off Confirm email, run `npm run verify:supabase` to check that accounts can't reach each other's data, then turn Confirm email back on.
 
 ## Behavior rules
 
@@ -84,7 +92,7 @@ All IDs are created on the phone so records can be made offline. Synced tables a
 
 Everything is built and proven locally first, then deployed step by step. V1 is a website used in the phone's browser, and adding it to the home screen is optional.
 
-**Build order:** 1, 2, 4, 5 and 7 (done). Then 3 and 6, which need Supabase. Deployment and 8 come last, once everything is proven to work locally.
+**Build order:** 1 to 7 are done. Deployment is in progress, and 8 comes last.
 
 **Sign-in:** V1 starts with email and password. Google sign-in moves to a later release.
 
@@ -161,8 +169,10 @@ Each milestone ends with something that can be tried on a phone, using `npm run 
 - **Rest timer:** the web version can't reliably alert on a locked phone. The screen stays awake instead, and lock-screen alerts arrive with the native app.
 - **iPhone storage:** Safari can clear data for websites that haven't been used for a while, so unsynced workouts are the main risk. The app syncs as soon as it can and shows when something hasn't synced.
 - **Costs:** Vercel's free plan is non-commercial only, and Supabase's free plan pauses inactive projects. Both need paid plans before real launch or making money.
+- **Device clocks:** the most recent change is judged by each device's clock, so a phone with a badly wrong clock can win or lose a conflict it shouldn't. This only matters when the same row is edited on two devices.
+- **Two devices offline at once:** starting a workout on both creates two workouts, and adding the same new custom exercise on both creates two entries. Nothing is lost, and both can be seen.
 - **Bangla wording:** written by Claude and not yet reviewed by the owner.
 
 ## Not in V1
 
-Analytics and charts, personal records, body measurements, streaks, ready-made programs, exercise videos, weight suggestions, social features, wearable sync, nutrition, AI coaching, and the native app.
+Analytics and charts, personal records, measurements beyond body weight, streaks, ready-made programs, exercise videos, weight suggestions, social features, wearable sync, nutrition, AI coaching, and the native app.

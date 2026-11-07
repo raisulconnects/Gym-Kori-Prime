@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { toLocalDate } from '../lib/week';
 import { type AttendanceDay, weekAttendance } from './attendance';
+import { latestBodyWeight } from './body';
 import {
+  type BodyWeight,
   db,
   type Routine,
   type RoutineExercise,
@@ -13,6 +15,7 @@ import {
 } from './db';
 import { BUILT_IN_EXERCISES, type ExerciseOption } from './exerciseCatalog';
 import { scheduleOn } from './store';
+import { getSyncStatus, subscribeToSyncStatus, type SyncStatus } from './sync';
 import { loadLastPerformance, type PastSet } from './workouts';
 
 export interface RoutineWithItems extends Routine {
@@ -203,6 +206,16 @@ export function useWorkoutDetail(workoutId: string): WorkoutDetail | null | unde
         })),
     };
   }, [workoutId]);
+}
+
+/** The most recent saved body weight. Null if none, undefined while loading. */
+export function useLatestBodyWeight(): BodyWeight | null | undefined {
+  return useLiveQuery(async () => latestBodyWeight(await db.bodyWeights.toArray()));
+}
+
+/** Whether this device's changes have reached the server. */
+export function useSyncStatus(): SyncStatus {
+  return useSyncExternalStore(subscribeToSyncStatus, getSyncStatus);
 }
 
 /** The current time, updated every interval while a screen needs a running clock. */

@@ -29,7 +29,7 @@ Logging a workout has to be faster than resting between sets. Gym Kori opens on 
 
 ## Status
 
-Gym Kori is in active development and hasn't launched yet. V1 currently runs locally. Accounts and profiles use Supabase, while workouts stay on the device until sync is built. See the [roadmap](#roadmap).
+Gym Kori is in active development and hasn't launched yet. V1 has a test deployment on Vercel. Accounts, profiles and backups use Supabase, and everything saves to the device first. See the [roadmap](#roadmap).
 
 ## Features
 
@@ -46,6 +46,9 @@ Gym Kori is in active development and hasn't launched yet. V1 currently runs loc
 | **History** | Review weekly attendance, missed days, and the full details of past workouts |
 | **Recovery** | Reopen the app to return to a running workout, and get asked to check the duration if you forgot to finish |
 | **Accounts** | Sign up, log in, reset your password, edit your name, log out, or delete your account |
+| **Backup and sync** | Keep routines, schedules and workouts on every device you log in to, and see when something hasn't backed up yet |
+| **Offline** | Install the app on your home screen and open it with no signal |
+| **About you** | Optionally save your gender, height and body weight, with a dated history of your weight |
 | **Personalization** | Choose English or Bangla, one of three themes, and kg or lb, saved to your profile so they follow you |
 
 ### Three themes
@@ -77,9 +80,9 @@ Gym Kori is in active development and hasn't launched yet. V1 currently runs loc
 | **Workout session** | Logging, rest timer, finish screen | Done |
 | **History** | Attendance and workout details | Done |
 | **Accounts** | Email and password login, profile, delete account | Done |
-| **Sync and offline** | Sync across devices, opening with no signal | Next |
+| **Sync and offline** | Sync across devices, opening with no signal | Done |
 | **Launch** | Hosting and checks on real phones | Planned |
-| **V2: Progress** | Analytics and charts, personal records, body measurements, streaks, Google sign-in | Later |
+| **V2: Progress** | Analytics and charts, personal records, more body measurements, streaks, Google sign-in | Later |
 | **V3: Guidance** | Ready-made programs, exercise videos, suggestions for when to increase weight | Later |
 | **V4: Extras** | Native app, social features, wearable sync, nutrition, AI coaching | Later |
 
@@ -91,10 +94,11 @@ Gym Kori is in active development and hasn't launched yet. V1 currently runs loc
 | Styling | [Tailwind CSS](https://tailwindcss.com) with theme variables |
 | Translations | [i18next](https://www.i18next.com) |
 | On-device storage | [Dexie](https://dexie.org) (IndexedDB) |
+| Install and offline loading | [vite-plugin-pwa](https://vite-pwa-org.netlify.app) |
 | Tests | [Vitest](https://vitest.dev) and [Playwright](https://playwright.dev) |
 | Linting | [Biome](https://biomejs.dev) |
 | Accounts and database | [Supabase](https://supabase.com) |
-| Hosting (planned) | [Vercel](https://vercel.com) |
+| Hosting | [Vercel](https://vercel.com) |
 
 ## Getting started
 
@@ -121,7 +125,7 @@ Connect your phone to the same Wi-Fi as your computer, then run:
 npm run phone
 ```
 
-Open the **Network** address it prints. Browsers limit some features on plain `http://` addresses, so the screen won't stay awake during a workout in this mode.
+Open the **Network** address it prints. Browsers limit some features on plain `http://` addresses, so the screen won't stay awake during a workout in this mode, and the app can't be installed or opened offline until it's hosted on `https://`.
 
 ## Scripts
 
@@ -153,7 +157,7 @@ flowchart LR
     A[Screens] -->|every tap| B[(Dexie on the phone)]
     B -->|live updates| A
     A -->|login and profile| C[(Supabase)]
-    B -.->|planned sync| C
+    B <-->|background sync| C
 ```
 
 These rules keep the data trustworthy:
@@ -161,7 +165,8 @@ These rules keep the data trustworthy:
 - **Weights are stored in kg as plain numbers.** Bangla digits and lb are only for entry and display.
 - **Changing a schedule never rewrites history.** Each change starts a new version from that date, so past attendance is judged by the plan at the time.
 - **Workouts keep their own copy of what happened.** Editing or deleting a routine leaves past workouts alone.
-- **Deletes are recorded, not erased.** Rows keep a delete time so the change can sync to other devices later.
+- **Deletes are recorded, not erased.** Rows keep a delete time so the change reaches other devices.
+- **The most recent change wins, row by row.** The server applies this too, so a device that was offline for days can't overwrite newer changes.
 - **A workout belongs to the day it started**, even if it runs past midnight.
 - **Each account has its own data on the device**, so people sharing a phone can't see each other's workouts, and logging out loses nothing.
 - **The publishable key is safe in the app.** Row-level security in Postgres is what protects each person's data.
@@ -193,7 +198,7 @@ src/
 └── workout/       Rest timer and keep-awake behavior
 e2e/               Browser tests
 docs/              Build plan and screenshots
-scripts/           Checks against the real Supabase project
+scripts/           Icon generation and checks against the real Supabase project
 supabase/          Database migrations
 ```
 

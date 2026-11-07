@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { formatClock, formatWeight, parseReps, parseWeight } from './units';
+import {
+  formatClock,
+  formatWeight,
+  parseBodyWeight,
+  parseFeetInches,
+  parseHeightCm,
+  parseReps,
+  parseWeight,
+  toFeetInches,
+} from './units';
 
 describe('weights', () => {
   it('keeps kg values as typed, including half plates', () => {
@@ -52,5 +61,37 @@ describe('formatClock', () => {
 
   it('never goes below zero', () => {
     expect(formatClock(-5)).toBe('0:00');
+  });
+});
+
+describe('body details', () => {
+  it('accepts a believable body weight in either unit, stored as kg', () => {
+    expect(parseBodyWeight('72.5', 'kg')).toBe(72.5);
+    expect(parseBodyWeight('160', 'lb')).toBeCloseTo(72.575, 3);
+  });
+
+  it('rejects a body weight nobody could have', () => {
+    expect(parseBodyWeight('', 'kg')).toBeNull();
+    expect(parseBodyWeight('5', 'kg')).toBeNull();
+    expect(parseBodyWeight('720', 'kg')).toBeNull();
+  });
+
+  it('converts feet and inches to centimetres and back without drifting', () => {
+    const height = parseFeetInches('5', '7');
+    expect(height).toBe(170.2);
+    expect(toFeetInches(height ?? 0)).toEqual({ feet: 5, inches: 7 });
+  });
+
+  it('treats blank inches as zero and carries a rounded 12 inches into feet', () => {
+    expect(parseFeetInches('6', '')).toBe(182.9);
+    expect(toFeetInches(182.5)).toEqual({ feet: 6, inches: 0 });
+  });
+
+  it('rejects impossible heights', () => {
+    expect(parseFeetInches('', '7')).toBeNull();
+    expect(parseFeetInches('5', '12')).toBeNull();
+    expect(parseFeetInches('50', '0')).toBeNull();
+    expect(parseHeightCm('10')).toBeNull();
+    expect(parseHeightCm('170.25')).toBe(170.3);
   });
 });

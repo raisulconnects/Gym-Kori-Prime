@@ -1,10 +1,12 @@
 export const THEMES = ['modern', 'kantha', 'rickshaw'] as const;
 export const LANGUAGES = ['en', 'bn'] as const;
 export const UNITS = ['kg', 'lb'] as const;
+export const GENDERS = ['male', 'female', 'prefer_not_to_say'] as const;
 
 export type Theme = (typeof THEMES)[number];
 export type Language = (typeof LANGUAGES)[number];
 export type Unit = (typeof UNITS)[number];
+export type Gender = (typeof GENDERS)[number];
 
 export interface Preferences {
   /** Stays null until the user picks a language at first launch. */

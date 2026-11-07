@@ -17,6 +17,12 @@ export function useFormat() {
       day: 'numeric',
     });
     const dayMonth = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
+    const dateTime = new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
     const longDay = new Intl.DateTimeFormat(locale, { weekday: 'long' });
     const shortDay = new Intl.DateTimeFormat('en-US', { weekday: 'narrow' });
     const mediumDay = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
@@ -24,6 +30,7 @@ export function useFormat() {
       number: (value: number | string) => (bangla ? toBanglaDigits(value) : String(value)),
       date: (date: Date) => longDate.format(date),
       dayMonth: (date: Date) => dayMonth.format(date),
+      dateTime: (date: Date) => dateTime.format(date),
       dayName: (date: Date) => longDay.format(date),
       dayShort: (date: Date) => (bangla ? (BANGLA_SHORT_DAYS[date.getDay()] ?? '') : shortDay.format(date)),
       dayMedium: (date: Date) => (bangla ? (BANGLA_SHORT_DAYS[date.getDay()] ?? '') : mediumDay.format(date)),

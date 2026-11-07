@@ -1,6 +1,7 @@
 import { Check, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import { SyncNotice } from '../components/SyncNotice';
 import { ThemeMotif } from '../components/ThemeDecorations';
 import { WeekStrip } from '../components/WeekStrip';
 import {
@@ -145,6 +146,7 @@ export function TodayScreen() {
           <UserRound aria-hidden="true" size={26} />
         </Link>
       </div>
+      <SyncNotice />
       {history && (
         <WeekStrip
           days={hasPlan ? history.days : history.days.map((day) => ({ ...day, status: 'none' as const }))}
